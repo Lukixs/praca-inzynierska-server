@@ -11,6 +11,7 @@ let rooms = [
   { id: "room5", name: "Pokój 5", players: [] },
   { id: "room6", name: "Pokój 6", players: [] },
 ];
+let playerColor;
 
 io.on("connection", (socket) => {
   let currentRoomId;
@@ -25,13 +26,13 @@ io.on("connection", (socket) => {
 
     const currentPlayer = { name: clientName, id: socket.id };
     const currentRoom = rooms.find((room) => room.name == roomName);
-    if (!currentRoom || currentRoom.players >= 2) return;
+    if (!currentRoom || currentRoom.players.length >= 2) return;
     socket.join(currentRoom.id);
     currentRoom.players.push(currentPlayer);
     currentRoomId = currentRoom.id;
 
-    const playerMoveOnWhite = currentRoom.players.length % 2 == 1;
-    socket.emit("joined", playerMoveOnWhite);
+    playerColor = currentRoom.players.length % 2 == 1;
+    socket.emit("joined");
     socket.broadcast.emit("rooms", rooms);
   });
 
@@ -56,6 +57,10 @@ io.on("connection", (socket) => {
 
   socket.on("remove-pawn", (pawn) => {
     if (currentRoomId != "") socket.to(currentRoomId).emit("remove-pawn", pawn);
+  });
+
+  socket.on("get-player-color", () => {
+    socket.emit("player-color", playerColor);
   });
 });
 
