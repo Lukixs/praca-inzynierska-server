@@ -31,8 +31,11 @@ io.on("connection", (socket) => {
     currentRoom.players.push(currentPlayer);
     currentRoomId = currentRoom.id;
 
-    playerColor = currentRoom.players.length % 2 == 1;
+    playerColor = currentRoom.players.length % 2 == 0;
     socket.emit("joined");
+    socket.emit("players-in-room", currentRoom.players);
+    if (!playerColor)
+      socket.to(currentRoomId).emit("players-in-room", currentRoom.players);
     socket.broadcast.emit("rooms", rooms);
   });
 
