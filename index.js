@@ -12,26 +12,11 @@ let rooms = [
   { id: "4", name: "Pokój 5", players: [] },
   { id: "5", name: "Pokój 6", players: [] },
 ];
-// let playerColor;
 
 io.on("connection", (socket) => {
   let currentRoomId;
-  // let currentRoom;
   let clientName;
   let currentPlayer = { name: clientName, id: socket.id, color: undefined };
-  // let currentPlayer;
-  // let connectionDelay = 0;
-
-  // setInterval(() => {
-  //   if (connectionDelay >= 4) {
-  //     console.log("Utraciliśmy połączenie dla gracza: ", clientName);
-  //     socket.disconnect(0);
-  //     return;
-  //   }
-  //   connectionDelay++;
-  //   socket.emit("check-connection");
-  //   // console.log("ClientConnected to Room: ", currentRoomId);
-  // }, 1000);
 
   socket.emit("rooms", rooms);
 
@@ -96,9 +81,6 @@ io.on("connection", (socket) => {
     if (currentRoomId != "") socket.to(currentRoomId).emit("remove-pawn", pawn);
   });
 
-  // socket.on("confirm-connection", () => {
-  //   connectionDelay = 0;
-  // });
   function findAvailableColors() {
     const playersInRoom = rooms[currentRoomId].players;
     if (playersInRoom.length >= 2) {
@@ -114,9 +96,7 @@ io.on("connection", (socket) => {
   }
 
   socket.on("disconnecting", (reason) => {
-    // for (const room of socket.rooms) {
-    //   if (room !== socket.id) {
-    console.log("Disconectig", reason);
+    // console.log("Disconectig", reason);
 
     if (currentRoomId) {
       rooms[currentRoomId].players = rooms[currentRoomId].players.filter(
@@ -127,8 +107,6 @@ io.on("connection", (socket) => {
       socket.to(currentRoomId).emit("user-has-left", clientName);
       socket.broadcast.emit("rooms", rooms);
     }
-    //   }
-    // }
   });
 });
 
