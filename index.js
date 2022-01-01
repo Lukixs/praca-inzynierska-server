@@ -1,42 +1,61 @@
 const http = require("http").createServer();
 const io = require("socket.io")(http, {
   cors: { origin: "*" },
+  pingTimeout: 10000,
 });
 
 let rooms = [
-  { id: "room1", name: "Pokój 1", players: [] },
-  { id: "room2", name: "Pokój 2", players: [] },
-  { id: "room3", name: "Pokój 3", players: [] },
-  { id: "room4", name: "Pokój 4", players: [] },
-  { id: "room5", name: "Pokój 5", players: [] },
-  { id: "room6", name: "Pokój 6", players: [] },
+  { id: "0", name: "Pokój 1", players: [] },
+  { id: "1", name: "Pokój 2", players: [] },
+  { id: "2", name: "Pokój 3", players: [] },
+  { id: "3", name: "Pokój 4", players: [] },
+  { id: "4", name: "Pokój 5", players: [] },
+  { id: "5", name: "Pokój 6", players: [] },
 ];
-let playerColor;
 
 io.on("connection", (socket) => {
   let currentRoomId;
   let clientName;
+  let currentPlayer = { name: clientName, id: socket.id, color: undefined };
 
   socket.emit("rooms", rooms);
 
   socket.on("joinRoom", (playerName, roomName) => {
     if (playerName == "" || !playerName)
-      clientName = `player ${socket.id.substring(0, 3)}`;
+      clientName = `Player ${socket.id.substring(0, 3)}`;
     else clientName = playerName;
 
-    const currentPlayer = { name: clientName, id: socket.id };
+    currentPlayer.name = clientName;
+    currentPlayer.id = socket.id;
     const currentRoom = rooms.find((room) => room.name == roomName);
     if (!currentRoom || currentRoom.players.length >= 2) return;
     socket.join(currentRoom.id);
-    currentRoom.players.push(currentPlayer);
     currentRoomId = currentRoom.id;
-
-    playerColor = currentRoom.players.length % 2 == 0;
     socket.emit("joined");
-    socket.emit("players-in-room", currentRoom.players);
-    if (!playerColor)
-      socket.to(currentRoomId).emit("players-in-room", currentRoom.players);
+  });
+
+  socket.on("get-available-colors", () => {
+    socket.emit("available-colors", findAvailableColors());
+  });
+
+  socket.on("set-player-color", (color) => {
+    currentPlayer.color = color;
+
+    rooms[currentRoomId].players.push(currentPlayer);
+
+    socket.to(currentRoomId).emit("available-colors", findAvailableColors());
+    socket.emit("color-setted");
+
+    socket
+      .to(currentRoomId)
+      .emit("players-in-room", rooms[currentRoomId].players);
+    socket.emit("players-in-room", rooms[currentRoomId].players);
+
     socket.broadcast.emit("rooms", rooms);
+  });
+
+  socket.on("get-player-color", () => {
+    socket.emit("player-color", currentPlayer.color);
   });
 
   socket.on("message", (message) => {
@@ -62,9 +81,33 @@ io.on("connection", (socket) => {
     if (currentRoomId != "") socket.to(currentRoomId).emit("remove-pawn", pawn);
   });
 
-  socket.on("get-player-color", () => {
-    socket.emit("player-color", playerColor);
+  function findAvailableColors() {
+    const playersInRoom = rooms[currentRoomId].players;
+    if (playersInRoom.length >= 2) {
+      return { white: false, black: false };
+    }
+    if (playersInRoom.length == 1) {
+      return {
+        white: playersInRoom[0].color != "white",
+        black: playersInRoom[0].color != "black",
+      };
+    }
+    return { white: true, black: true };
+  }
+
+  socket.on("disconnecting", (reason) => {
+    // console.log("Disconectig", reason);
+
+    if (currentRoomId) {
+      rooms[currentRoomId].players = rooms[currentRoomId].players.filter(
+        (player) => {
+          return player.id != socket.id;
+        }
+      );
+      socket.to(currentRoomId).emit("user-has-left", clientName);
+      socket.broadcast.emit("rooms", rooms);
+    }
   });
 });
 
-http.listen(8081, () => console.log("listening on http://localhost:8080"));
+http.listen(8081, () => console.log("listening on http://localhost:8081"));
