@@ -50,11 +50,15 @@ io.on("connection", (socket) => {
       .to(currentRoomId)
       .emit("players-in-room", rooms[currentRoomId].players);
     socket.emit("players-in-room", rooms[currentRoomId].players);
+    socket.to(currentRoomId).emit("user-has-joined-chat", clientName);
 
     socket.broadcast.emit("rooms", rooms);
   });
 
   socket.on("get-player-color", () => {
+    currentPlayer = rooms[currentRoomId].players.find(
+      (player) => player.id == currentPlayer.id
+    );
     socket.emit("player-color", currentPlayer.color);
   });
 
@@ -79,6 +83,28 @@ io.on("connection", (socket) => {
 
   socket.on("remove-pawn", (pawn) => {
     if (currentRoomId != "") socket.to(currentRoomId).emit("remove-pawn", pawn);
+  });
+
+  socket.on("surrender", () => {
+    if (currentRoomId == "") return;
+    socket.to(currentRoomId).emit("player-surrendered", currentPlayer.name);
+    socket.emit("player-surrendered", currentPlayer.name);
+    socket.emit("show-rematch-option");
+  });
+
+  socket.on("set-rematch", () => {
+    if (currentRoomId == "") return;
+
+    rooms[currentRoomId].players.forEach((player) => {
+      if (player.color == "white") player.color = "black";
+      else player.color = "white";
+    });
+    socket
+      .to(currentRoomId)
+      .emit("players-in-room", rooms[currentRoomId].players);
+    socket.emit("players-in-room", rooms[currentRoomId].players);
+    socket.to(currentRoomId).emit("setup-game");
+    socket.emit("setup-game");
   });
 
   function findAvailableColors() {
