@@ -131,6 +131,9 @@ io.on("connection", (socket) => {
         }
       );
       socket.to(currentRoomId).emit("user-has-left", clientName);
+      socket
+        .to(currentRoomId)
+        .emit("players-in-room", rooms[currentRoomId].players);
       socket.broadcast.emit("rooms", rooms);
     }
   });
